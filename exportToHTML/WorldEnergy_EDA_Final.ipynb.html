@@ -1,0 +1,809 @@
+<html>
+<head>
+<title>WorldEnergy_EDA_Final.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+WorldEnergy_EDA_Final.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% md 
+# World Energy EDA: Economic Development and Environmental Cost (2000–2024) 
+ 
+--- 
+ 
+## Research Problem Statement 
+ 
+Despite rapid economic growth in the 21st century, it remains unclear whether wealthier nations are successfully decoupling GDP growth from greenhouse gas emissions, or whether higher economic output continues to drive proportionally higher energy consumption and environmental impact — a gap that critically undermines the formulation of effective climate policy and sustainable development targets. 
+ 
+--- 
+ 
+## Research Questions 
+ 
+**RQ1:** Is there a statistically significant positive relationship between a **country's GDP** and its **primary energy consumption and greenhouse gas emissions** over the period 2000–2024? 
+ 
+**RQ2:** Do the **top 10 highest-GDP countries** show a different **emissions-to-energy trend** compared to the **bottom 10 lowest-GDP countries** over the same period? 
+ 
+--- 
+ 
+## Research Objectives 
+ 
+1. To perform systematic data quality assessment on the World Energy dataset and justify the selection of the 2000–2024 scope based on data completeness evidence. 
+2. To identify the strongest correlated variable triplet (GDP, energy, emissions) as the analytical scope through exploratory correlation analysis. 
+ 
+--- 
+ 
+## EDA Workflow 
+ 
+``` 
+Raw data (23,195 rows × 130 cols) 
+    │ 
+    ├─ Step 1: Load &amp; Inspect 
+    ├─ Step 2: Data Quality Checks 
+    ├─ Step 3: Classify entities (country vs aggregate) 
+    ├─ Step 4: Scope selection — Time period justification 
+    ├─ Step 5: Scope selection — Variable selection via correlation 
+    ├─ Step 6: Data cleaning &amp; imputation 
+    ├─ Step 7: Post-clean validation 
+    ├─ Step 8: Univariate analysis 
+    ├─ Step 9: Bivariate &amp; relationship analysis 
+    ├─ Step 10: Group comparison (Top 10 vs Bottom 10 GDP) 
+    └─ Step 11: Summary &amp; conclusions 
+``` 
+ <hr class="ls0">#%% md 
+--- 
+## Step 1: Import Libraries &amp; Load Data 
+ <hr class="ls0">#%% 
+</span><span class="s1">import </span><span class="s0">pandas </span><span class="s1">as </span><span class="s0">pd</span>
+<span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">ticker </span><span class="s1">as </span><span class="s0">mticker</span>
+<span class="s1">import </span><span class="s0">seaborn </span><span class="s1">as </span><span class="s0">sns</span>
+<span class="s1">import </span><span class="s0">warnings</span>
+
+<span class="s0">warnings</span><span class="s2">.</span><span class="s0">filterwarnings</span><span class="s2">(</span><span class="s3">'ignore'</span><span class="s2">)</span>
+
+<span class="s4"># Global visual style</span>
+<span class="s0">sns</span><span class="s2">.</span><span class="s0">set_theme</span><span class="s2">(</span><span class="s0">style</span><span class="s2">=</span><span class="s3">'whitegrid'</span><span class="s2">, </span><span class="s0">palette</span><span class="s2">=</span><span class="s3">'tab10'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">rcParams</span><span class="s2">.</span><span class="s0">update</span><span class="s2">({</span>
+    <span class="s3">'figure.dpi'</span><span class="s2">: </span><span class="s5">110</span><span class="s2">,</span>
+    <span class="s3">'axes.titlesize'</span><span class="s2">: </span><span class="s5">13</span><span class="s2">,</span>
+    <span class="s3">'axes.labelsize'</span><span class="s2">: </span><span class="s5">11</span><span class="s2">,</span>
+    <span class="s3">'xtick.labelsize'</span><span class="s2">: </span><span class="s5">9</span><span class="s2">,</span>
+    <span class="s3">'ytick.labelsize'</span><span class="s2">: </span><span class="s5">9</span><span class="s2">,</span>
+<span class="s2">})</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Libraries loaded successfully.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Update path if needed ──────────────────────────────────────────────────</span>
+<span class="s0">CSV_PATH </span><span class="s2">= </span><span class="s3">r'WorldEnergy.csv'</span>
+<span class="s4"># ───────────────────────────────────────────────────────────────────────────</span>
+
+<span class="s0">df_raw </span><span class="s2">= </span><span class="s0">pd</span><span class="s2">.</span><span class="s0">read_csv</span><span class="s2">(</span><span class="s0">CSV_PATH</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dataset loaded: </span><span class="s1">{</span><span class="s0">df_raw</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span><span class="s1">:</span><span class="s3">,</span><span class="s1">} </span><span class="s3">rows × </span><span class="s1">{</span><span class="s0">df_raw</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">1</span><span class="s2">]</span><span class="s1">} </span><span class="s3">columns&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Year range    : </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">())</span><span class="s1">} </span><span class="s3">– </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">())</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Entities      : </span><span class="s1">{</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span><span class="s1">} </span><span class="s3">unique&quot;</span><span class="s2">)</span>
+<span class="s0">df_raw</span><span class="s2">.</span><span class="s0">head</span><span class="s2">(</span><span class="s5">3</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 2: Raw Data Quality Checks 
+ 
+**Rationale:** Check for quality of raw data, checking duplicates and year ranges 
+ 
+&gt; **Gap in Makai's notebook:** Quality checks were skipped entirely on the raw data. Duplicate detection, year range validation, and string anomaly checks were missing. 
+&gt; **Gap in Notebook A (Desmond Kan):** Quality checks existed but were run after filtering, missing issues in the raw data. 
+ 
+We check for: (1) duplicates, (2) year range validity, (3) structural entity classification, (4) overall missingness pattern. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── 2.1 Duplicate check ────────────────────────────────────────────────────</span>
+<span class="s0">n_full_dup   </span><span class="s2">= </span><span class="s0">df_raw</span><span class="s2">.</span><span class="s0">duplicated</span><span class="s2">().</span><span class="s0">sum</span><span class="s2">()</span>
+<span class="s0">n_key_dup    </span><span class="s2">= </span><span class="s0">df_raw</span><span class="s2">.</span><span class="s0">duplicated</span><span class="s2">(</span><span class="s0">subset</span><span class="s2">=[</span><span class="s3">'country'</span><span class="s2">, </span><span class="s3">'year'</span><span class="s2">]).</span><span class="s0">sum</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== Duplicate Check ===&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Fully duplicate rows         : </span><span class="s1">{</span><span class="s0">n_full_dup</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Duplicate (country, year) pairs: </span><span class="s1">{</span><span class="s0">n_key_dup</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s1">if </span><span class="s0">n_key_dup </span><span class="s2">== </span><span class="s5">0</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;  ✅ No duplicate entries — each country-year pair is unique.&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;  ⚠️  Duplicates found — investigation needed.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── 2.2 Year range sanity check ────────────────────────────────────────────</span>
+<span class="s0">invalid_yr </span><span class="s2">= </span><span class="s0">df_raw</span><span class="s2">[(</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] &lt; </span><span class="s5">1900</span><span class="s2">) | (</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] &gt; </span><span class="s5">2025</span><span class="s2">)]</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== Year Range Check ===&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Expected: 1900–2024&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Actual  : </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">())</span><span class="s1">} </span><span class="s3">– </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">())</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Rows outside valid range: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">invalid_yr</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s1">if </span><span class="s0">len</span><span class="s2">(</span><span class="s0">invalid_yr</span><span class="s2">) == </span><span class="s5">0</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;  ✅ All years within expected range.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── 2.3 Overall missingness — top 15 columns ───────────────────────────────</span>
+<span class="s0">missing_all </span><span class="s2">= (</span><span class="s0">df_raw</span><span class="s2">.</span><span class="s0">isnull</span><span class="s2">().</span><span class="s0">sum</span><span class="s2">() / </span><span class="s0">len</span><span class="s2">(</span><span class="s0">df_raw</span><span class="s2">) * </span><span class="s5">100</span><span class="s2">).</span><span class="s0">sort_values</span><span class="s2">(</span><span class="s0">ascending</span><span class="s2">=</span><span class="s1">False</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== Top 15 Columns by Missing % (raw dataset) ===&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">missing_all</span><span class="s2">.</span><span class="s0">head</span><span class="s2">(</span><span class="s5">15</span><span class="s2">).</span><span class="s0">to_string</span><span class="s2">())</span>
+
+<span class="s4"># Severity bucketing</span>
+<span class="s1">def </span><span class="s0">miss_severity</span><span class="s2">(</span><span class="s0">pct</span><span class="s2">):</span>
+    <span class="s1">if </span><span class="s0">pct </span><span class="s2">== </span><span class="s5">0</span><span class="s2">:       </span><span class="s1">return </span><span class="s3">'Complete (0%)'</span>
+    <span class="s1">elif </span><span class="s0">pct </span><span class="s2">&lt;= </span><span class="s5">20</span><span class="s2">:    </span><span class="s1">return </span><span class="s3">'Low (&lt;20%)'</span>
+    <span class="s1">elif </span><span class="s0">pct </span><span class="s2">&lt;= </span><span class="s5">50</span><span class="s2">:    </span><span class="s1">return </span><span class="s3">'Moderate (20-50%)'</span>
+    <span class="s1">elif </span><span class="s0">pct </span><span class="s2">&lt;= </span><span class="s5">80</span><span class="s2">:    </span><span class="s1">return </span><span class="s3">'High (50-80%)'</span>
+    <span class="s1">else</span><span class="s2">:              </span><span class="s1">return </span><span class="s3">'Very High (&gt;80%)'</span>
+
+<span class="s0">buckets </span><span class="s2">= </span><span class="s0">missing_all</span><span class="s2">.</span><span class="s0">apply</span><span class="s2">(</span><span class="s0">miss_severity</span><span class="s2">).</span><span class="s0">value_counts</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== Missingness Severity Buckets ===&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">buckets</span><span class="s2">.</span><span class="s0">to_string</span><span class="s2">())</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── 2.4 Missingness bar chart (top 20 columns) ─────────────────────────────</span>
+<span class="s0">top20_miss </span><span class="s2">= </span><span class="s0">missing_all</span><span class="s2">.</span><span class="s0">head</span><span class="s2">(</span><span class="s5">20</span><span class="s2">)</span>
+<span class="s0">colors </span><span class="s2">= [</span><span class="s3">'#d62728' </span><span class="s1">if </span><span class="s0">v </span><span class="s2">&gt; </span><span class="s5">80 </span><span class="s1">else </span><span class="s3">'#ff7f0e' </span><span class="s1">if </span><span class="s0">v </span><span class="s2">&gt; </span><span class="s5">50 </span><span class="s1">else </span><span class="s3">'#f7b731' </span><span class="s1">if </span><span class="s0">v </span><span class="s2">&gt; </span><span class="s5">20 </span><span class="s1">else </span><span class="s3">'#2ca02c'</span>
+          <span class="s1">for </span><span class="s0">v </span><span class="s1">in </span><span class="s0">top20_miss</span><span class="s2">.</span><span class="s0">values</span><span class="s2">]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">13</span><span class="s2">, </span><span class="s5">5</span><span class="s2">))</span>
+<span class="s0">bars </span><span class="s2">= </span><span class="s0">ax</span><span class="s2">.</span><span class="s0">bar</span><span class="s2">(</span><span class="s0">top20_miss</span><span class="s2">.</span><span class="s0">index</span><span class="s2">, </span><span class="s0">top20_miss</span><span class="s2">.</span><span class="s0">values</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s0">colors</span><span class="s2">, </span><span class="s0">edgecolor</span><span class="s2">=</span><span class="s3">'white'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">0.5</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">axhline</span><span class="s2">(</span><span class="s5">80</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'#d62728'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s3">'--'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">1</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'&gt;80% — drop candidate'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">axhline</span><span class="s2">(</span><span class="s5">50</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'#ff7f0e'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s3">'--'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">1</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'&gt;50% — use with caution'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'Top 20 Columns by Missing % — Raw Dataset'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">'Missing %'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylim</span><span class="s2">(</span><span class="s5">0</span><span class="s2">, </span><span class="s5">105</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">9</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">xticks</span><span class="s2">(</span><span class="s0">rotation</span><span class="s2">=</span><span class="s5">45</span><span class="s2">, </span><span class="s0">ha</span><span class="s2">=</span><span class="s3">'right'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">bar</span><span class="s2">, </span><span class="s0">val </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">bars</span><span class="s2">, </span><span class="s0">top20_miss</span><span class="s2">.</span><span class="s0">values</span><span class="s2">):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s0">bar</span><span class="s2">.</span><span class="s0">get_x</span><span class="s2">() + </span><span class="s0">bar</span><span class="s2">.</span><span class="s0">get_width</span><span class="s2">()/</span><span class="s5">2</span><span class="s2">, </span><span class="s0">bar</span><span class="s2">.</span><span class="s0">get_height</span><span class="s2">() + </span><span class="s5">1</span><span class="s2">,</span>
+            <span class="s3">f'</span><span class="s1">{</span><span class="s0">val</span><span class="s1">:</span><span class="s3">.0f</span><span class="s1">}</span><span class="s3">%'</span><span class="s2">, </span><span class="s0">ha</span><span class="s2">=</span><span class="s3">'center'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">8</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 3: Classify Entities — Countries vs Regional Aggregates 
+ 
+**Rationale:** The dataset contains 314 unique entities, but not all are sovereign countries. Rows like `&quot;Africa (Ember)&quot;`, `&quot;Asia (EIA)&quot;`, and `&quot;World&quot;` are regional or source-specific aggregates. If included in country-level analysis, they will double-count emissions and energy figures (e.g. &quot;Asia&quot; already contains China, India, Japan). 
+ 
+**Method:** Rows with a valid 3-character ISO 3166-1 alpha-3 code (`iso_code`) are sovereign countries. Rows without an ISO code are aggregates. 
+ 
+&gt; **This step was correct in Makai's notebook** and is retained here. 
+ <hr class="ls0">#%% 
+real_countries     </span><span class="s2">= </span><span class="s0">df_raw</span><span class="s2">[</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'iso_code'</span><span class="s2">].</span><span class="s0">notna</span><span class="s2">() &amp; (</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'iso_code'</span><span class="s2">].</span><span class="s0">str</span><span class="s2">.</span><span class="s0">len</span><span class="s2">() == </span><span class="s5">3</span><span class="s2">)].</span><span class="s0">copy</span><span class="s2">()</span>
+<span class="s0">aggregate_regions  </span><span class="s2">= </span><span class="s0">df_raw</span><span class="s2">[</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'iso_code'</span><span class="s2">].</span><span class="s0">isna</span><span class="s2">() | (</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'iso_code'</span><span class="s2">] == </span><span class="s3">''</span><span class="s2">)].</span><span class="s0">copy</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Real countries      : </span><span class="s1">{</span><span class="s0">real_countries</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Aggregate/regional  : </span><span class="s1">{</span><span class="s0">aggregate_regions</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Sample aggregate entities (first 15):&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">list</span><span class="s2">(</span><span class="s0">aggregate_regions</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">unique</span><span class="s2">()[:</span><span class="s5">15</span><span class="s2">]))</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 4: Time Period Scope Selection — Justification 
+ 
+**Rationale:** The full dataset spans 1900–2024 (124 years), but data quality degrades significantly before 2000. We use evidence from the data itself to justify restricting to **2000–2024**. 
+ 
+Three lines of evidence support this decision: 
+ 
+1. **Greenhouse gas emissions data** is entirely absent before 2000 (100% missing pre-2000). 
+2. **GDP data** is ~49% missing pre-2000 vs ~30% post-2000 — already borderline, but usable. 
+3. **Primary energy consumption** is 57.6% missing pre-2000 vs only 1.8% post-2000. 
+ 
+Any analysis spanning pre-2000 years would require imputing majority-missing columns — introducing more noise than signal. The **2000–2024 window** is the largest range with acceptable data completeness for all three core variables. 
+ 
+ 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── Evidence: missing rate pre-2000 vs post-2000 for the three core variables ─</span>
+<span class="s0">trio_cols </span><span class="s2">= [</span><span class="s3">'gdp'</span><span class="s2">, </span><span class="s3">'primary_energy_consumption'</span><span class="s2">, </span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">]</span>
+
+<span class="s0">pre  </span><span class="s2">= </span><span class="s0">df_raw</span><span class="s2">[</span><span class="s0">df_raw</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] &lt; </span><span class="s5">2000</span><span class="s2">]</span>
+<span class="s0">post </span><span class="s2">= </span><span class="s0">real_countries</span><span class="s2">[</span><span class="s0">real_countries</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] &gt;= </span><span class="s5">2000</span><span class="s2">]</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot; </span><span class="s2">* </span><span class="s5">62</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">{</span><span class="s3">'Column'</span><span class="s1">:</span><span class="s3">&lt;35</span><span class="s1">} {</span><span class="s3">'Pre-2000 Missing'</span><span class="s1">:</span><span class="s3">&gt;15</span><span class="s1">} {</span><span class="s3">'Post-2000 Missing'</span><span class="s1">:</span><span class="s3">&gt;15</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot; </span><span class="s2">* </span><span class="s5">62</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">col </span><span class="s1">in </span><span class="s0">trio_cols</span><span class="s2">:</span>
+    <span class="s0">pre_pct  </span><span class="s2">= </span><span class="s0">pre</span><span class="s2">[</span><span class="s0">col</span><span class="s2">].</span><span class="s0">isna</span><span class="s2">().</span><span class="s0">mean</span><span class="s2">() * </span><span class="s5">100</span>
+    <span class="s0">post_pct </span><span class="s2">= </span><span class="s0">post</span><span class="s2">[</span><span class="s0">col</span><span class="s2">].</span><span class="s0">isna</span><span class="s2">().</span><span class="s0">mean</span><span class="s2">() * </span><span class="s5">100</span>
+    <span class="s0">flag </span><span class="s2">= </span><span class="s3">'✅' </span><span class="s1">if </span><span class="s0">post_pct </span><span class="s2">&lt; </span><span class="s5">30 </span><span class="s1">else </span><span class="s3">'⚠️'</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">{</span><span class="s0">col</span><span class="s1">:</span><span class="s3">&lt;35</span><span class="s1">} {</span><span class="s0">pre_pct</span><span class="s1">:</span><span class="s3">&gt;14.1f</span><span class="s1">}</span><span class="s3">% </span><span class="s1">{</span><span class="s0">post_pct</span><span class="s1">:</span><span class="s3">&gt;14.1f</span><span class="s1">}</span><span class="s3">% </span><span class="s1">{</span><span class="s0">flag</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot; </span><span class="s2">* </span><span class="s5">62</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Decision: Restrict to 2000–2024.&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Justification: All three core variables drop from majority-missing&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;(&gt;49%) to minority-missing (&lt;30%) in the post-2000 window.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Apply the time scope ───────────────────────────────────────────────────</span>
+<span class="s0">START_YEAR</span><span class="s2">, </span><span class="s0">END_YEAR </span><span class="s2">= </span><span class="s5">2000</span><span class="s2">, </span><span class="s5">2024</span>
+
+<span class="s0">rc_scoped </span><span class="s2">= </span><span class="s0">real_countries</span><span class="s2">[(</span><span class="s0">real_countries</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] &gt;= </span><span class="s0">START_YEAR</span><span class="s2">) &amp;</span>
+                            <span class="s2">(</span><span class="s0">real_countries</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] &lt;= </span><span class="s0">END_YEAR</span><span class="s2">)].</span><span class="s0">copy</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Scoped dataset: </span><span class="s1">{</span><span class="s0">rc_scoped</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span><span class="s1">:</span><span class="s3">,</span><span class="s1">} </span><span class="s3">rows × </span><span class="s1">{</span><span class="s0">rc_scoped</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">1</span><span class="s2">]</span><span class="s1">} </span><span class="s3">columns&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Countries     : </span><span class="s1">{</span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Year range    : </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">())</span><span class="s1">} </span><span class="s3">– </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">())</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 5: Variable Selection — Correlation-Driven Scope Narrowing 
+ 
+**Rationale:** The scoped dataset still has 130 columns, most of which are energy sub-categories (coal, solar, wind, nuclear, etc.). Rather than arbitrarily picking variables, we use a **data-driven approach**: compute a correlation matrix on columns with acceptable completeness (≤50% missing), identify the highest-correlated cluster, and use that cluster as our analytical scope. 
+ 
+**Expected outcome:** Economic size (GDP), energy consumption, and emissions form a tight high-correlation cluster — which we then use as the research focus. 
+ 
+&gt; **This logic was Makai's key contribution** and is the strongest part of that notebook. Retained and made explicit here. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── Select numeric columns with ≤50% missing ───────────────────────────────</span>
+<span class="s0">numeric_cols </span><span class="s2">= </span><span class="s0">rc_scoped</span><span class="s2">.</span><span class="s0">select_dtypes</span><span class="s2">(</span><span class="s0">include</span><span class="s2">=</span><span class="s0">np</span><span class="s2">.</span><span class="s0">number</span><span class="s2">).</span><span class="s0">columns</span><span class="s2">.</span><span class="s0">tolist</span><span class="s2">()</span>
+<span class="s0">miss_pct_scoped </span><span class="s2">= (</span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s0">numeric_cols</span><span class="s2">].</span><span class="s0">isnull</span><span class="s2">().</span><span class="s0">mean</span><span class="s2">() * </span><span class="s5">100</span><span class="s2">)</span>
+<span class="s0">cols_to_keep </span><span class="s2">= </span><span class="s0">miss_pct_scoped</span><span class="s2">[</span><span class="s0">miss_pct_scoped </span><span class="s2">&lt;= </span><span class="s5">50</span><span class="s2">].</span><span class="s0">index</span><span class="s2">.</span><span class="s0">tolist</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Numeric columns total         : </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">numeric_cols</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Columns with ≤50% missing     : </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">cols_to_keep</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dropped (&gt;50% missing)        : </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">numeric_cols</span><span class="s2">) - </span><span class="s0">len</span><span class="s2">(</span><span class="s0">cols_to_keep</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Pearson correlation matrix on retained columns ─────────────────────────</span>
+<span class="s0">corr_matrix </span><span class="s2">= </span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s0">cols_to_keep</span><span class="s2">].</span><span class="s0">corr</span><span class="s2">(</span><span class="s0">method</span><span class="s2">=</span><span class="s3">'pearson'</span><span class="s2">)</span>
+
+<span class="s4"># Top 10 strongest positive pairs (excluding self-correlations)</span>
+<span class="s0">pairs </span><span class="s2">= (</span><span class="s0">corr_matrix</span><span class="s2">.</span><span class="s0">unstack</span><span class="s2">()</span>
+         <span class="s2">.</span><span class="s0">reset_index</span><span class="s2">()</span>
+         <span class="s2">.</span><span class="s0">rename</span><span class="s2">(</span><span class="s0">columns</span><span class="s2">={</span><span class="s3">'level_0'</span><span class="s2">: </span><span class="s3">'Var1'</span><span class="s2">, </span><span class="s3">'level_1'</span><span class="s2">: </span><span class="s3">'Var2'</span><span class="s2">, </span><span class="s5">0</span><span class="s2">: </span><span class="s3">'Correlation'</span><span class="s2">}))</span>
+<span class="s0">pairs </span><span class="s2">= </span><span class="s0">pairs</span><span class="s2">[</span><span class="s0">pairs</span><span class="s2">[</span><span class="s3">'Var1'</span><span class="s2">] &lt; </span><span class="s0">pairs</span><span class="s2">[</span><span class="s3">'Var2'</span><span class="s2">]].</span><span class="s0">sort_values</span><span class="s2">(</span><span class="s3">'Correlation'</span><span class="s2">, </span><span class="s0">ascending</span><span class="s2">=</span><span class="s1">False</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Top 10 strongest correlated pairs (Pearson r):&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">pairs</span><span class="s2">.</span><span class="s0">head</span><span class="s2">(</span><span class="s5">10</span><span class="s2">).</span><span class="s0">to_string</span><span class="s2">(</span><span class="s0">index</span><span class="s2">=</span><span class="s1">False</span><span class="s2">))</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Focused heatmap: key energy &amp; economic indicators ───────────────────────</span>
+<span class="s0">key_features </span><span class="s2">= [</span>
+    <span class="s3">'population'</span><span class="s2">, </span><span class="s3">'gdp'</span><span class="s2">, </span><span class="s3">'primary_energy_consumption'</span><span class="s2">, </span><span class="s3">'energy_per_capita'</span><span class="s2">,</span>
+    <span class="s3">'renewables_share_energy'</span><span class="s2">, </span><span class="s3">'fossil_share_energy'</span><span class="s2">, </span><span class="s3">'coal_share_energy'</span><span class="s2">,</span>
+    <span class="s3">'carbon_intensity_elec'</span><span class="s2">, </span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">,</span>
+    <span class="s3">'solar_share_energy'</span><span class="s2">, </span><span class="s3">'wind_share_energy'</span><span class="s2">, </span><span class="s3">'hydro_share_energy'</span><span class="s2">, </span><span class="s3">'nuclear_share_energy'</span>
+<span class="s2">]</span>
+<span class="s0">key_features </span><span class="s2">= [</span><span class="s0">c </span><span class="s1">for </span><span class="s0">c </span><span class="s1">in </span><span class="s0">key_features </span><span class="s1">if </span><span class="s0">c </span><span class="s1">in </span><span class="s0">cols_to_keep</span><span class="s2">]</span>
+<span class="s0">corr_subset </span><span class="s2">= </span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s0">key_features</span><span class="s2">].</span><span class="s0">corr</span><span class="s2">()</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">10</span><span class="s2">, </span><span class="s5">9</span><span class="s2">))</span>
+<span class="s0">mask </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">triu</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">ones_like</span><span class="s2">(</span><span class="s0">corr_subset</span><span class="s2">, </span><span class="s0">dtype</span><span class="s2">=</span><span class="s0">bool</span><span class="s2">))</span>
+<span class="s0">sns</span><span class="s2">.</span><span class="s0">heatmap</span><span class="s2">(</span><span class="s0">corr_subset</span><span class="s2">, </span><span class="s0">mask</span><span class="s2">=</span><span class="s0">mask</span><span class="s2">, </span><span class="s0">annot</span><span class="s2">=</span><span class="s1">True</span><span class="s2">, </span><span class="s0">fmt</span><span class="s2">=</span><span class="s3">'.2f'</span><span class="s2">,</span>
+            <span class="s0">cmap</span><span class="s2">=</span><span class="s3">'coolwarm'</span><span class="s2">, </span><span class="s0">center</span><span class="s2">=</span><span class="s5">0</span><span class="s2">, </span><span class="s0">linewidths</span><span class="s2">=</span><span class="s5">0.5</span><span class="s2">,</span>
+            <span class="s0">annot_kws</span><span class="s2">={</span><span class="s3">'size'</span><span class="s2">: </span><span class="s5">8</span><span class="s2">}, </span><span class="s0">square</span><span class="s2">=</span><span class="s1">True</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">,</span>
+            <span class="s0">cbar_kws</span><span class="s2">={</span><span class="s3">'shrink'</span><span class="s2">: </span><span class="s5">0.8</span><span class="s2">})</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'Correlation Matrix — Key Energy &amp; Economic Indicators</span><span class="s1">\n</span><span class="s3">(Real Countries, 2000–2024)'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">xticks</span><span class="s2">(</span><span class="s0">rotation</span><span class="s2">=</span><span class="s5">45</span><span class="s2">, </span><span class="s0">ha</span><span class="s2">=</span><span class="s3">'right'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Decision: select the three most mutually correlated economic/emissions variables ─</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot; </span><span class="s2">* </span><span class="s5">65</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;SCOPE DECISION&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot; </span><span class="s2">* </span><span class="s5">65</span><span class="s2">)</span>
+<span class="s0">selected_trio </span><span class="s2">= [</span><span class="s3">'gdp'</span><span class="s2">, </span><span class="s3">'primary_energy_consumption'</span><span class="s2">, </span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">]</span>
+<span class="s0">corr_trio </span><span class="s2">= </span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s0">selected_trio</span><span class="s2">].</span><span class="s0">corr</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Correlation among selected trio:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">corr_trio</span><span class="s2">.</span><span class="s0">round</span><span class="s2">(</span><span class="s5">3</span><span class="s2">))</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;All three pairs have r &gt; 0.94 — the strongest cluster in the dataset.&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Selected scope:&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">col </span><span class="s1">in </span><span class="s0">selected_trio</span><span class="s2">:</span>
+    <span class="s0">miss </span><span class="s2">= </span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s0">col</span><span class="s2">].</span><span class="s0">isna</span><span class="s2">().</span><span class="s0">mean</span><span class="s2">() * </span><span class="s5">100</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  </span><span class="s1">{</span><span class="s0">col</span><span class="s1">:</span><span class="s3">&lt;38</span><span class="s1">} </span><span class="s3">Missing: </span><span class="s1">{</span><span class="s0">miss</span><span class="s1">:</span><span class="s3">.1f</span><span class="s1">}</span><span class="s3">%&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;These three variables directly address RQ1 and RQ2.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 6: Data Cleaning &amp; Imputation 
+ 
+**Rationale:** With the scope defined, we now clean only the three selected columns. The cleaning sequence matters: 
+ 
+1. **Sort by country + year** — ensures interpolation fills gaps chronologically, not randomly. 
+2. **First-pass interpolation** — linear interpolation within each country's time series (limit=2 gaps). This fills small within-series gaps using the adjacent years. 
+3. **Zero/negative value replacement** — zero energy consumption or negative GDP are physically/economically impossible and are treated as encoding errors, replaced with NaN. 
+4. **Second-pass interpolation** — re-interpolate after zero replacement (no limit — remaining gaps after step 2 are structural, not encoding errors). 
+5. **Drop rows still missing** — countries with no recoverable data for any of the three variables are excluded. 
+ 
+&gt; **Fix from Makai's notebook:** The order of operations was wrong — zeroes were handled *after* the first drop, meaning some countries were dropped before their zero values were corrected. Also, `limit=1` in first interpolation was too conservative given some countries have 2-year reporting gaps. 
+&gt;  
+&gt; **Fix from Notebook A:** Cleaning was flagged but never executed. Here it is fully implemented. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── Build the working DataFrame ─────────────────────────────────────────────</span>
+<span class="s0">ID_COLS  </span><span class="s2">= [</span><span class="s3">'country'</span><span class="s2">, </span><span class="s3">'iso_code'</span><span class="s2">, </span><span class="s3">'year'</span><span class="s2">]</span>
+<span class="s0">TRIO     </span><span class="s2">= [</span><span class="s3">'gdp'</span><span class="s2">, </span><span class="s3">'primary_energy_consumption'</span><span class="s2">, </span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">]</span>
+
+<span class="s0">df_work </span><span class="s2">= </span><span class="s0">rc_scoped</span><span class="s2">[</span><span class="s0">ID_COLS </span><span class="s2">+ </span><span class="s0">TRIO</span><span class="s2">].</span><span class="s0">copy</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Working DataFrame shape (before cleaning): </span><span class="s1">{</span><span class="s0">df_work</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Missing values before cleaning:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">df_work</span><span class="s2">[</span><span class="s0">TRIO</span><span class="s2">].</span><span class="s0">isnull</span><span class="s2">().</span><span class="s0">sum</span><span class="s2">().</span><span class="s0">to_string</span><span class="s2">())</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Step 6a: Sort by country + year ─────────────────────────────────────────</span>
+<span class="s4"># Critical: interpolation assumes chronological order within each country group</span>
+<span class="s0">df_work </span><span class="s2">= </span><span class="s0">df_work</span><span class="s2">.</span><span class="s0">sort_values</span><span class="s2">([</span><span class="s3">'country'</span><span class="s2">, </span><span class="s3">'year'</span><span class="s2">]).</span><span class="s0">reset_index</span><span class="s2">(</span><span class="s0">drop</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;✅ Sorted by country + year.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Step 6b: First-pass interpolation (limit=2 consecutive gaps) ────────────</span>
+<span class="s4"># 'limit=2' handles countries with up to 2-year reporting gaps (e.g. small island nations)</span>
+<span class="s4"># 'limit_direction=both' fills gaps at the start and end of a series too</span>
+<span class="s1">for </span><span class="s0">col </span><span class="s1">in </span><span class="s0">TRIO</span><span class="s2">:</span>
+    <span class="s0">df_work</span><span class="s2">[</span><span class="s0">col</span><span class="s2">] = (</span><span class="s0">df_work</span>
+                    <span class="s2">.</span><span class="s0">groupby</span><span class="s2">(</span><span class="s3">'country'</span><span class="s2">)[</span><span class="s0">col</span><span class="s2">]</span>
+                    <span class="s2">.</span><span class="s0">transform</span><span class="s2">(</span><span class="s1">lambda </span><span class="s0">x</span><span class="s2">: </span><span class="s0">x</span><span class="s2">.</span><span class="s0">interpolate</span><span class="s2">(</span>
+                        <span class="s0">method</span><span class="s2">=</span><span class="s3">'linear'</span><span class="s2">, </span><span class="s0">limit_direction</span><span class="s2">=</span><span class="s3">'both'</span><span class="s2">, </span><span class="s0">limit</span><span class="s2">=</span><span class="s5">2</span><span class="s2">)))</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Missing after first-pass interpolation:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">df_work</span><span class="s2">[</span><span class="s0">TRIO</span><span class="s2">].</span><span class="s0">isnull</span><span class="s2">().</span><span class="s0">sum</span><span class="s2">().</span><span class="s0">to_string</span><span class="s2">())</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Step 6c: Replace zero and negative values with NaN ─────────────────────</span>
+<span class="s4"># Zero or negative values are physically impossible for these variables:</span>
+<span class="s4">#   - GDP cannot be 0 or negative (would indicate no economic activity)</span>
+<span class="s4">#   - Primary energy consumption cannot be &lt;= 0</span>
+<span class="s4">#   - Greenhouse gas emissions &lt;= 0 would imply net carbon sink (not in this dataset context)</span>
+
+<span class="s0">zero_counts </span><span class="s2">= {}</span>
+<span class="s1">for </span><span class="s0">col </span><span class="s1">in </span><span class="s0">TRIO</span><span class="s2">:</span>
+    <span class="s0">n_zero </span><span class="s2">= (</span><span class="s0">df_work</span><span class="s2">[</span><span class="s0">col</span><span class="s2">] &lt;= </span><span class="s5">0</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">()</span>
+    <span class="s0">zero_counts</span><span class="s2">[</span><span class="s0">col</span><span class="s2">] = </span><span class="s0">n_zero</span>
+    <span class="s0">df_work</span><span class="s2">.</span><span class="s0">loc</span><span class="s2">[</span><span class="s0">df_work</span><span class="s2">[</span><span class="s0">col</span><span class="s2">] &lt;= </span><span class="s5">0</span><span class="s2">, </span><span class="s0">col</span><span class="s2">] = </span><span class="s0">np</span><span class="s2">.</span><span class="s0">nan</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Zero/negative values replaced with NaN:&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">col</span><span class="s2">, </span><span class="s0">n </span><span class="s1">in </span><span class="s0">zero_counts</span><span class="s2">.</span><span class="s0">items</span><span class="s2">():</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  </span><span class="s1">{</span><span class="s0">col</span><span class="s1">:</span><span class="s3">&lt;40</span><span class="s1">}</span><span class="s3">: </span><span class="s1">{</span><span class="s0">n</span><span class="s1">} </span><span class="s3">values replaced&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Step 6d: Second-pass interpolation (no limit — structural gaps only) ────</span>
+<span class="s1">for </span><span class="s0">col </span><span class="s1">in </span><span class="s0">TRIO</span><span class="s2">:</span>
+    <span class="s0">df_work</span><span class="s2">[</span><span class="s0">col</span><span class="s2">] = (</span><span class="s0">df_work</span>
+                    <span class="s2">.</span><span class="s0">groupby</span><span class="s2">(</span><span class="s3">'country'</span><span class="s2">)[</span><span class="s0">col</span><span class="s2">]</span>
+                    <span class="s2">.</span><span class="s0">transform</span><span class="s2">(</span><span class="s1">lambda </span><span class="s0">x</span><span class="s2">: </span><span class="s0">x</span><span class="s2">.</span><span class="s0">interpolate</span><span class="s2">(</span>
+                        <span class="s0">method</span><span class="s2">=</span><span class="s3">'linear'</span><span class="s2">, </span><span class="s0">limit_direction</span><span class="s2">=</span><span class="s3">'both'</span><span class="s2">)))</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Missing after second-pass interpolation:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">df_work</span><span class="s2">[</span><span class="s0">TRIO</span><span class="s2">].</span><span class="s0">isnull</span><span class="s2">().</span><span class="s0">sum</span><span class="s2">().</span><span class="s0">to_string</span><span class="s2">())</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Step 6e: Drop rows with any remaining missing values ────────────────────</span>
+<span class="s0">rows_before </span><span class="s2">= </span><span class="s0">len</span><span class="s2">(</span><span class="s0">df_work</span><span class="s2">)</span>
+<span class="s0">df_clean </span><span class="s2">= </span><span class="s0">df_work</span><span class="s2">.</span><span class="s0">dropna</span><span class="s2">(</span><span class="s0">subset</span><span class="s2">=</span><span class="s0">TRIO</span><span class="s2">).</span><span class="s0">copy</span><span class="s2">()</span>
+<span class="s0">rows_after </span><span class="s2">= </span><span class="s0">len</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Rows before drop : </span><span class="s1">{</span><span class="s0">rows_before</span><span class="s1">:</span><span class="s3">,</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Rows after drop  : </span><span class="s1">{</span><span class="s0">rows_after</span><span class="s1">:</span><span class="s3">,</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Rows removed     : </span><span class="s1">{</span><span class="s0">rows_before </span><span class="s2">- </span><span class="s0">rows_after</span><span class="s1">:</span><span class="s3">,</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Countries retained: </span><span class="s1">{</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 7: Post-Cleaning Validation 
+ 
+**Rationale:** After any data transformation, you must verify the result is correct before proceeding to analysis. This is the step most commonly skipped in student notebooks. 
+ 
+We verify: 
+1. No missing values remain in the trio columns 
+2. No zero or negative values remain 
+3. Interpolation did not introduce unrealistic values (basic statistical sanity check) 
+4. Country-year coverage is complete enough for meaningful analysis 
+ 
+&gt; **Gap in both notebooks:** Neither had a dedicated validation cell. Makai's Cell 18 repeated the null check from Cell 16 but didn't verify the zero/negative fix or check for implausible imputed values. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── 7.1 Null check ──────────────────────────────────────────────────────────</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== Null Check (must all be 0) ===&quot;</span><span class="s2">)</span>
+<span class="s0">null_check </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s0">TRIO</span><span class="s2">].</span><span class="s0">isnull</span><span class="s2">().</span><span class="s0">sum</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">null_check</span><span class="s2">.</span><span class="s0">to_string</span><span class="s2">())</span>
+<span class="s1">assert </span><span class="s0">null_check</span><span class="s2">.</span><span class="s0">sum</span><span class="s2">() == </span><span class="s5">0</span><span class="s2">, </span><span class="s3">&quot;❌ Still has nulls — check cleaning steps&quot;</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;✅ No missing values remaining.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── 7.2 Zero/negative check ─────────────────────────────────────────────────</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== Zero/Negative Check (must all be 0) ===&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">col </span><span class="s1">in </span><span class="s0">TRIO</span><span class="s2">:</span>
+    <span class="s0">n </span><span class="s2">= (</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s0">col</span><span class="s2">] &lt;= </span><span class="s5">0</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">()</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  </span><span class="s1">{</span><span class="s0">col</span><span class="s1">:</span><span class="s3">&lt;40</span><span class="s1">}</span><span class="s3">: </span><span class="s1">{</span><span class="s0">n</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s1">assert </span><span class="s0">n </span><span class="s2">== </span><span class="s5">0</span><span class="s2">, </span><span class="s3">f&quot;❌ </span><span class="s1">{</span><span class="s0">col</span><span class="s1">} </span><span class="s3">still has zero/negative values&quot;</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;✅ No zero or negative values remaining.&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── 7.3 Descriptive statistics — plausibility check ─────────────────────────</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== Descriptive Statistics (plausibility check) ===&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s0">TRIO</span><span class="s2">].</span><span class="s0">describe</span><span class="s2">().</span><span class="s0">round</span><span class="s2">(</span><span class="s5">2</span><span class="s2">))</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Expectation checks:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  GDP min &gt; 0           : </span><span class="s1">{</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'gdp'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">() &gt; </span><span class="s5">0</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Energy min &gt; 0        : </span><span class="s1">{</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'primary_energy_consumption'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">() &gt; </span><span class="s5">0</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Emissions min &gt; 0     : </span><span class="s1">{</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">() &gt; </span><span class="s5">0</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Countries in clean df : </span><span class="s1">{</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Year span             : </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">())</span><span class="s1">} </span><span class="s3">– </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">())</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── 7.4 Coverage heatmap: how many years of data per country ────────────────</span>
+<span class="s0">coverage </span><span class="s2">= (</span><span class="s0">df_clean</span><span class="s2">.</span><span class="s0">groupby</span><span class="s2">(</span><span class="s3">'country'</span><span class="s2">)[</span><span class="s3">'year'</span><span class="s2">]</span>
+            <span class="s2">.</span><span class="s0">count</span><span class="s2">()</span>
+            <span class="s2">.</span><span class="s0">sort_values</span><span class="s2">(</span><span class="s0">ascending</span><span class="s2">=</span><span class="s1">False</span><span class="s2">))</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">10</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">hist</span><span class="s2">(</span><span class="s0">coverage</span><span class="s2">.</span><span class="s0">values</span><span class="s2">, </span><span class="s0">bins</span><span class="s2">=</span><span class="s5">25</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'steelblue'</span><span class="s2">, </span><span class="s0">edgecolor</span><span class="s2">=</span><span class="s3">'white'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">axvline</span><span class="s2">(</span><span class="s0">coverage</span><span class="s2">.</span><span class="s0">median</span><span class="s2">(), </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'red'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s3">'--'</span><span class="s2">,</span>
+           <span class="s0">label</span><span class="s2">=</span><span class="s3">f'Median: </span><span class="s1">{</span><span class="s0">coverage</span><span class="s2">.</span><span class="s0">median</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.0f</span><span class="s1">} </span><span class="s3">years'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'Distribution of Year Coverage per Country (post-cleaning)'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">'Number of years with complete data'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">'Number of countries'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Countries with full 25-year coverage (2000–2024): </span><span class="s1">{</span><span class="s2">(</span><span class="s0">coverage </span><span class="s2">== </span><span class="s5">25</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Countries with &lt; 10 years of data: </span><span class="s1">{</span><span class="s2">(</span><span class="s0">coverage </span><span class="s2">&lt; </span><span class="s5">10</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 8: Univariate Analysis 
+ 
+**Rationale:** Before comparing groups, we examine each variable independently to understand its distribution. Economic variables (GDP, emissions) are typically right-skewed — a small number of large economies dominate. This affects which statistical methods and chart scales are appropriate later. 
+ 
+**What we check per variable:** 
+- Distribution shape (histogram + KDE) 
+- Central tendency (mean vs median — divergence indicates skew) 
+- Spread and outliers (boxplot) 
+ 
+&gt; **Gap in Makai's notebook:** No univariate analysis was performed — the notebook jumped directly from cleaning to correlation and group comparison. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── Distributions — latest year snapshot ────────────────────────────────────</span>
+<span class="s0">latest_year </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">()</span>
+<span class="s0">df_latest   </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] == </span><span class="s0">latest_year</span><span class="s2">].</span><span class="s0">copy</span><span class="s2">()</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">15</span><span class="s2">, </span><span class="s5">5</span><span class="s2">))</span>
+
+<span class="s0">plot_config </span><span class="s2">= {</span>
+    <span class="s3">'gdp'</span><span class="s2">:                        (</span><span class="s3">'GDP (USD)'</span><span class="s2">, </span><span class="s3">'#378ADD'</span><span class="s2">),</span>
+    <span class="s3">'primary_energy_consumption'</span><span class="s2">: (</span><span class="s3">'Primary Energy (TWh)'</span><span class="s2">, </span><span class="s3">'#1D9E75'</span><span class="s2">),</span>
+    <span class="s3">'greenhouse_gas_emissions'</span><span class="s2">:   (</span><span class="s3">'GHG Emissions (MtCO₂e)'</span><span class="s2">, </span><span class="s3">'#D85A30'</span><span class="s2">),</span>
+<span class="s2">}</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, (</span><span class="s0">col</span><span class="s2">, (</span><span class="s0">label</span><span class="s2">, </span><span class="s0">color</span><span class="s2">)) </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">, </span><span class="s0">plot_config</span><span class="s2">.</span><span class="s0">items</span><span class="s2">()):</span>
+    <span class="s0">data </span><span class="s2">= </span><span class="s0">df_latest</span><span class="s2">[</span><span class="s0">col</span><span class="s2">].</span><span class="s0">dropna</span><span class="s2">()</span>
+    <span class="s0">sns</span><span class="s2">.</span><span class="s0">histplot</span><span class="s2">(</span><span class="s0">data</span><span class="s2">, </span><span class="s0">bins</span><span class="s2">=</span><span class="s5">40</span><span class="s2">, </span><span class="s0">kde</span><span class="s2">=</span><span class="s1">True</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s0">color</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.7</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">axvline</span><span class="s2">(</span><span class="s0">data</span><span class="s2">.</span><span class="s0">median</span><span class="s2">(), </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'black'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s3">'--'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">1.5</span><span class="s2">,</span>
+               <span class="s0">label</span><span class="s2">=</span><span class="s3">f'Median: </span><span class="s1">{</span><span class="s0">data</span><span class="s2">.</span><span class="s0">median</span><span class="s2">()</span><span class="s1">:</span><span class="s3">,.0f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">axvline</span><span class="s2">(</span><span class="s0">data</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(), </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'red'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s3">':'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">1.5</span><span class="s2">,</span>
+               <span class="s0">label</span><span class="s2">=</span><span class="s3">f'Mean: </span><span class="s1">{</span><span class="s0">data</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">()</span><span class="s1">:</span><span class="s3">,.0f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Distribution of </span><span class="s1">{</span><span class="s0">label</span><span class="s1">}\n</span><span class="s3">(Latest year: </span><span class="s1">{</span><span class="s0">latest_year</span><span class="s1">}</span><span class="s3">)'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s0">label</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">8</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span>
+    <span class="s3">'Univariate Distributions — All Countries (Latest Year)</span><span class="s1">\n</span><span class="s3">'</span>
+    <span class="s3">'Note: Mean &gt;&gt; Median confirms strong right skew — log scale recommended for these variables.'</span><span class="s2">,</span>
+    <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">11</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span>
+<span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Log-transformed distributions (better for skewed economic data) ──────────</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">15</span><span class="s2">, </span><span class="s5">5</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, (</span><span class="s0">col</span><span class="s2">, (</span><span class="s0">label</span><span class="s2">, </span><span class="s0">color</span><span class="s2">)) </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">, </span><span class="s0">plot_config</span><span class="s2">.</span><span class="s0">items</span><span class="s2">()):</span>
+    <span class="s0">data </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">log10</span><span class="s2">(</span><span class="s0">df_latest</span><span class="s2">[</span><span class="s0">col</span><span class="s2">].</span><span class="s0">dropna</span><span class="s2">())</span>
+    <span class="s0">sns</span><span class="s2">.</span><span class="s0">histplot</span><span class="s2">(</span><span class="s0">data</span><span class="s2">, </span><span class="s0">bins</span><span class="s2">=</span><span class="s5">35</span><span class="s2">, </span><span class="s0">kde</span><span class="s2">=</span><span class="s1">True</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s0">color</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.7</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">axvline</span><span class="s2">(</span><span class="s0">data</span><span class="s2">.</span><span class="s0">median</span><span class="s2">(), </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'black'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s3">'--'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">1.5</span><span class="s2">,</span>
+               <span class="s0">label</span><span class="s2">=</span><span class="s3">f'Median (log₁₀): </span><span class="s1">{</span><span class="s0">data</span><span class="s2">.</span><span class="s0">median</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Log₁₀ Distribution of </span><span class="s1">{</span><span class="s0">label</span><span class="s1">}</span><span class="s3">'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">f'log₁₀ (</span><span class="s1">{</span><span class="s0">label</span><span class="s1">}</span><span class="s3">)'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">8</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span>
+    <span class="s3">'Log-Transformed Distributions — Right skew resolves after log transformation,</span><span class="s1">\n</span><span class="s3">'</span>
+    <span class="s3">'confirming log scale is appropriate for all three variables.'</span><span class="s2">,</span>
+    <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">11</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span>
+<span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Boxplots by decade ───────────────────────────────────────────────────────</span>
+<span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'decade'</span><span class="s2">] = (</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] // </span><span class="s5">10</span><span class="s2">) * </span><span class="s5">10</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">15</span><span class="s2">, </span><span class="s5">5</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, (</span><span class="s0">col</span><span class="s2">, (</span><span class="s0">label</span><span class="s2">, </span><span class="s0">color</span><span class="s2">)) </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">, </span><span class="s0">plot_config</span><span class="s2">.</span><span class="s0">items</span><span class="s2">()):</span>
+    <span class="s0">sns</span><span class="s2">.</span><span class="s0">boxplot</span><span class="s2">(</span><span class="s0">data</span><span class="s2">=</span><span class="s0">df_clean</span><span class="s2">, </span><span class="s0">x</span><span class="s2">=</span><span class="s3">'decade'</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s0">col</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">,</span>
+                <span class="s0">color</span><span class="s2">=</span><span class="s0">color</span><span class="s2">, </span><span class="s0">width</span><span class="s2">=</span><span class="s5">0.5</span><span class="s2">, </span><span class="s0">flierprops</span><span class="s2">={</span><span class="s3">'markersize'</span><span class="s2">: </span><span class="s5">3</span><span class="s2">})</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_yscale</span><span class="s2">(</span><span class="s3">'log'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'</span><span class="s1">{</span><span class="s0">label</span><span class="s1">} </span><span class="s3">by Decade'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">'Decade'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">f'</span><span class="s1">{</span><span class="s0">label</span><span class="s1">} </span><span class="s3">(log scale)'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">tick_params</span><span class="s2">(</span><span class="s0">axis</span><span class="s2">=</span><span class="s3">'x'</span><span class="s2">, </span><span class="s0">rotation</span><span class="s2">=</span><span class="s5">30</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'Distribution by Decade (log scale) — Medians rising for GDP &amp; Energy; Emissions flattening post-2010'</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">11</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 9: Bivariate &amp; Relationship Analysis 
+ 
+**Rationale:** With distributions understood, we now examine pairwise relationships to answer **RQ1**: *Is there a statistically significant positive relationship between GDP, energy consumption, and emissions?* 
+ 
+We use: 
+- **Scatter plots with trend lines** (log-log scale — standard for economic relationships) 
+- **Time colour-coding** — to detect if the relationship has changed over the 2000–2024 period (i.e. are countries decoupling?) 
+ 
+**Year colour-coding interpretation:** If later years (yellow) cluster below the trend line in the GDP-vs-emissions chart, it suggests richer countries are starting to decouple economic growth from emissions — a key policy signal. 
+ 
+&gt; **Fix from Makai's notebook:** Cell 24 referenced `df_plot` which was **never defined** — a broken variable reference that would cause a `NameError` at runtime. Fixed here. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── Build df_plot (fix for Makai's undefined variable bug) ─────────────────</span>
+<span class="s4"># Use the full cleaned dataset, drop any remaining NaN in plotting columns</span>
+<span class="s0">df_plot </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[[</span><span class="s3">'country'</span><span class="s2">, </span><span class="s3">'year'</span><span class="s2">] + </span><span class="s0">TRIO</span><span class="s2">].</span><span class="s0">dropna</span><span class="s2">().</span><span class="s0">copy</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;df_plot rows: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">df_plot</span><span class="s2">)</span><span class="s1">:</span><span class="s3">,</span><span class="s1">}  </span><span class="s3">|  Countries: </span><span class="s1">{</span><span class="s0">df_plot</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── GDP vs Energy &amp; GDP vs Emissions — scatter with trend line ──────────────</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">16</span><span class="s2">, </span><span class="s5">7</span><span class="s2">))</span>
+
+<span class="s0">pairs_to_plot </span><span class="s2">= [</span>
+    <span class="s2">(</span><span class="s3">'gdp'</span><span class="s2">, </span><span class="s3">'primary_energy_consumption'</span><span class="s2">,</span>
+     <span class="s3">'GDP (USD, log)'</span><span class="s2">, </span><span class="s3">'Primary Energy Consumption (TWh, log)'</span><span class="s2">, </span><span class="s3">'viridis'</span><span class="s2">),</span>
+    <span class="s2">(</span><span class="s3">'gdp'</span><span class="s2">, </span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">,</span>
+     <span class="s3">'GDP (USD, log)'</span><span class="s2">, </span><span class="s3">'GHG Emissions (MtCO₂e, log)'</span><span class="s2">, </span><span class="s3">'plasma'</span><span class="s2">),</span>
+<span class="s2">]</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, (</span><span class="s0">xcol</span><span class="s2">, </span><span class="s0">ycol</span><span class="s2">, </span><span class="s0">xlabel</span><span class="s2">, </span><span class="s0">ylabel</span><span class="s2">, </span><span class="s0">cmap</span><span class="s2">) </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">, </span><span class="s0">pairs_to_plot</span><span class="s2">):</span>
+    <span class="s0">sc </span><span class="s2">= </span><span class="s0">ax</span><span class="s2">.</span><span class="s0">scatter</span><span class="s2">(</span><span class="s0">df_plot</span><span class="s2">[</span><span class="s0">xcol</span><span class="s2">], </span><span class="s0">df_plot</span><span class="s2">[</span><span class="s0">ycol</span><span class="s2">],</span>
+                    <span class="s0">c</span><span class="s2">=</span><span class="s0">df_plot</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s0">cmap</span><span class="s2">,</span>
+                    <span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.45</span><span class="s2">, </span><span class="s0">s</span><span class="s2">=</span><span class="s5">30</span><span class="s2">, </span><span class="s0">edgecolors</span><span class="s2">=</span><span class="s3">'white'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">0.3</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xscale</span><span class="s2">(</span><span class="s3">'log'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_yscale</span><span class="s2">(</span><span class="s3">'log'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s0">xlabel</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s0">ylabel</span><span class="s2">)</span>
+
+    <span class="s4"># OLS trend line on log-log scale</span>
+    <span class="s0">lx </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">log10</span><span class="s2">(</span><span class="s0">df_plot</span><span class="s2">[</span><span class="s0">xcol</span><span class="s2">])</span>
+    <span class="s0">ly </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">log10</span><span class="s2">(</span><span class="s0">df_plot</span><span class="s2">[</span><span class="s0">ycol</span><span class="s2">])</span>
+    <span class="s0">mask </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">isfinite</span><span class="s2">(</span><span class="s0">lx</span><span class="s2">) &amp; </span><span class="s0">np</span><span class="s2">.</span><span class="s0">isfinite</span><span class="s2">(</span><span class="s0">ly</span><span class="s2">)</span>
+    <span class="s0">z </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">polyfit</span><span class="s2">(</span><span class="s0">lx</span><span class="s2">[</span><span class="s0">mask</span><span class="s2">], </span><span class="s0">ly</span><span class="s2">[</span><span class="s0">mask</span><span class="s2">], </span><span class="s5">1</span><span class="s2">)</span>
+    <span class="s0">p </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">poly1d</span><span class="s2">(</span><span class="s0">z</span><span class="s2">)</span>
+    <span class="s0">x_range </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">linspace</span><span class="s2">(</span><span class="s0">lx</span><span class="s2">[</span><span class="s0">mask</span><span class="s2">].</span><span class="s0">min</span><span class="s2">(), </span><span class="s0">lx</span><span class="s2">[</span><span class="s0">mask</span><span class="s2">].</span><span class="s0">max</span><span class="s2">(), </span><span class="s5">200</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s5">10</span><span class="s2">**</span><span class="s0">x_range</span><span class="s2">, </span><span class="s5">10</span><span class="s2">**</span><span class="s0">p</span><span class="s2">(</span><span class="s0">x_range</span><span class="s2">), </span><span class="s3">'r--'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">2</span><span class="s2">,</span>
+            <span class="s0">label</span><span class="s2">=</span><span class="s3">f'Trend: slope=</span><span class="s1">{</span><span class="s0">z</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">9</span><span class="s2">)</span>
+
+    <span class="s0">r_val </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">corrcoef</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">log10</span><span class="s2">(</span><span class="s0">df_plot</span><span class="s2">[</span><span class="s0">xcol</span><span class="s2">][</span><span class="s0">mask</span><span class="s2">]), </span><span class="s0">np</span><span class="s2">.</span><span class="s0">log10</span><span class="s2">(</span><span class="s0">df_plot</span><span class="s2">[</span><span class="s0">ycol</span><span class="s2">][</span><span class="s0">mask</span><span class="s2">]))[</span><span class="s5">0</span><span class="s2">,</span><span class="s5">1</span><span class="s2">]</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'</span><span class="s1">{</span><span class="s0">xcol</span><span class="s2">.</span><span class="s0">upper</span><span class="s2">().</span><span class="s0">replace</span><span class="s2">(</span><span class="s3">&quot;_&quot;</span><span class="s2">,</span><span class="s3">&quot; &quot;</span><span class="s2">)</span><span class="s1">} </span><span class="s3">vs </span><span class="s1">{</span><span class="s0">ycol</span><span class="s2">.</span><span class="s0">upper</span><span class="s2">().</span><span class="s0">replace</span><span class="s2">(</span><span class="s3">&quot;_&quot;</span><span class="s2">,</span><span class="s3">&quot; &quot;</span><span class="s2">)</span><span class="s1">}\n</span><span class="s3">'</span>
+                 <span class="s3">f'Pearson r (log-log) = </span><span class="s1">{</span><span class="s0">r_val</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">colorbar</span><span class="s2">(</span><span class="s0">sc</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'Year'</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'Bivariate Relationships — GDP vs Energy &amp; Emissions (2000–2024)</span><span class="s1">\n</span><span class="s3">'</span>
+             <span class="s3">'Colour = Year: yellow dots above trendline suggest later-year outliers'</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">12</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Three-way scatter: GDP, Energy, Emissions simultaneously ────────────────</span>
+<span class="s4"># Bubble chart: x=GDP, y=Emissions, bubble size=Energy, colour=year</span>
+<span class="s0">df_latest_plot </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">] == </span><span class="s0">latest_year</span><span class="s2">].</span><span class="s0">dropna</span><span class="s2">(</span><span class="s0">subset</span><span class="s2">=</span><span class="s0">TRIO</span><span class="s2">).</span><span class="s0">copy</span><span class="s2">()</span>
+
+<span class="s4"># Normalise bubble size for plotting</span>
+<span class="s0">size_norm </span><span class="s2">= (</span><span class="s0">df_latest_plot</span><span class="s2">[</span><span class="s3">'primary_energy_consumption'</span><span class="s2">] /</span>
+             <span class="s0">df_latest_plot</span><span class="s2">[</span><span class="s3">'primary_energy_consumption'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">() * </span><span class="s5">800 </span><span class="s2">+ </span><span class="s5">10</span><span class="s2">)</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">11</span><span class="s2">, </span><span class="s5">7</span><span class="s2">))</span>
+<span class="s0">sc </span><span class="s2">= </span><span class="s0">ax</span><span class="s2">.</span><span class="s0">scatter</span><span class="s2">(</span><span class="s0">df_latest_plot</span><span class="s2">[</span><span class="s3">'gdp'</span><span class="s2">],</span>
+                <span class="s0">df_latest_plot</span><span class="s2">[</span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">],</span>
+                <span class="s0">s</span><span class="s2">=</span><span class="s0">size_norm</span><span class="s2">,</span>
+                <span class="s0">c</span><span class="s2">=</span><span class="s0">np</span><span class="s2">.</span><span class="s0">log10</span><span class="s2">(</span><span class="s0">df_latest_plot</span><span class="s2">[</span><span class="s3">'primary_energy_consumption'</span><span class="s2">]),</span>
+                <span class="s0">cmap</span><span class="s2">=</span><span class="s3">'YlOrRd'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.7</span><span class="s2">, </span><span class="s0">edgecolors</span><span class="s2">=</span><span class="s3">'grey'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">0.3</span><span class="s2">)</span>
+
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xscale</span><span class="s2">(</span><span class="s3">'log'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_yscale</span><span class="s2">(</span><span class="s3">'log'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">'GDP (USD, log scale)'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">'GHG Emissions (MtCO₂e, log scale)'</span><span class="s2">)</span>
+<span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Three-Way Relationship: GDP × Emissions × Energy Consumption (</span><span class="s1">{</span><span class="s0">latest_year</span><span class="s1">}</span><span class="s3">)</span><span class="s1">\n</span><span class="s3">'</span>
+             <span class="s3">'Bubble size = Primary Energy Consumption | Colour = log₁₀(Energy)'</span><span class="s2">,</span>
+             <span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">colorbar</span><span class="s2">(</span><span class="s0">sc</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'log₁₀ Primary Energy Consumption'</span><span class="s2">)</span>
+
+<span class="s4"># Annotate top 5 emitters</span>
+<span class="s0">top5 </span><span class="s2">= </span><span class="s0">df_latest_plot</span><span class="s2">.</span><span class="s0">nlargest</span><span class="s2">(</span><span class="s5">5</span><span class="s2">, </span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">_</span><span class="s2">, </span><span class="s0">row </span><span class="s1">in </span><span class="s0">top5</span><span class="s2">.</span><span class="s0">iterrows</span><span class="s2">():</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">annotate</span><span class="s2">(</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">],</span>
+                <span class="s0">xy</span><span class="s2">=(</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'gdp'</span><span class="s2">], </span><span class="s0">row</span><span class="s2">[</span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">]),</span>
+                <span class="s0">xytext</span><span class="s2">=(</span><span class="s5">8</span><span class="s2">, </span><span class="s5">4</span><span class="s2">), </span><span class="s0">textcoords</span><span class="s2">=</span><span class="s3">'offset points'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">8</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s3">'black'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 10: Group Comparison — Top 10 vs Bottom 10 GDP Countries 
+ 
+**Rationale:** This addresses **RQ2**: *Do the top 10 highest-GDP countries show a different emissions-to-energy trend compared to the bottom 10?* 
+ 
+**Method:** We rank countries by their **average GDP across 2000–2024** (not a single-year snapshot, which could be biased by a crisis year). Countries are then grouped as Top 10 or Bottom 10, and we compare their distributions and time-series trends for all three variables. 
+ 
+**Why average GDP instead of a single year?** A country may have an unusual GDP in any given year (oil boom, financial crisis). The 25-year average is a more stable measure of economic standing. 
+ 
+&gt; **Makai's notebook was correct on this logic.** Added here with additional chart types: time-series trend lines and a normalised emissions-intensity view. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── Rank countries by average GDP (2000–2024) ───────────────────────────────</span>
+<span class="s0">avg_df </span><span class="s2">= (</span><span class="s0">df_clean</span>
+          <span class="s2">.</span><span class="s0">groupby</span><span class="s2">(</span><span class="s3">'country'</span><span class="s2">)[</span><span class="s0">TRIO</span><span class="s2">]</span>
+          <span class="s2">.</span><span class="s0">mean</span><span class="s2">()</span>
+          <span class="s2">.</span><span class="s0">reset_index</span><span class="s2">())</span>
+
+<span class="s0">top_10_countries    </span><span class="s2">= </span><span class="s0">avg_df</span><span class="s2">.</span><span class="s0">nlargest</span><span class="s2">(</span><span class="s5">10</span><span class="s2">,  </span><span class="s3">'gdp'</span><span class="s2">)[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">tolist</span><span class="s2">()</span>
+<span class="s0">bottom_10_countries </span><span class="s2">= </span><span class="s0">avg_df</span><span class="s2">.</span><span class="s0">nsmallest</span><span class="s2">(</span><span class="s5">10</span><span class="s2">, </span><span class="s3">'gdp'</span><span class="s2">)[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">tolist</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Top 10 GDP Countries (avg 2000–2024):&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">top_10_countries</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Bottom 10 GDP Countries (avg 2000–2024):&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">bottom_10_countries</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Build grouped DataFrame ──────────────────────────────────────────────────</span>
+<span class="s0">df_grouped </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">.</span><span class="s0">copy</span><span class="s2">()</span>
+<span class="s0">df_grouped</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">] = </span><span class="s0">np</span><span class="s2">.</span><span class="s0">where</span><span class="s2">(</span>
+    <span class="s0">df_grouped</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">isin</span><span class="s2">(</span><span class="s0">top_10_countries</span><span class="s2">), </span><span class="s3">'Top 10 GDP'</span><span class="s2">,</span>
+    <span class="s0">np</span><span class="s2">.</span><span class="s0">where</span><span class="s2">(</span><span class="s0">df_grouped</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">isin</span><span class="s2">(</span><span class="s0">bottom_10_countries</span><span class="s2">), </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">, </span><span class="s3">'Other'</span><span class="s2">)</span>
+<span class="s2">)</span>
+<span class="s0">df_box </span><span class="s2">= </span><span class="s0">df_grouped</span><span class="s2">[</span><span class="s0">df_grouped</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">].</span><span class="s0">isin</span><span class="s2">([</span><span class="s3">'Top 10 GDP'</span><span class="s2">, </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">])].</span><span class="s0">copy</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Top 10 group rows    : </span><span class="s1">{</span><span class="s2">(</span><span class="s0">df_box</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">]==</span><span class="s3">'Top 10 GDP'</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Bottom 10 group rows : </span><span class="s1">{</span><span class="s2">(</span><span class="s0">df_box</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">]==</span><span class="s3">'Bottom 10 GDP'</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">()</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Faceted boxplots: all three variables side by side ───────────────────────</span>
+<span class="s0">melted_box </span><span class="s2">= </span><span class="s0">df_box</span><span class="s2">.</span><span class="s0">melt</span><span class="s2">(</span>
+    <span class="s0">id_vars</span><span class="s2">=[</span><span class="s3">'country'</span><span class="s2">, </span><span class="s3">'year'</span><span class="s2">, </span><span class="s3">'group'</span><span class="s2">],</span>
+    <span class="s0">value_vars</span><span class="s2">=</span><span class="s0">TRIO</span><span class="s2">,</span>
+    <span class="s0">var_name</span><span class="s2">=</span><span class="s3">'Variable'</span><span class="s2">, </span><span class="s0">value_name</span><span class="s2">=</span><span class="s3">'Value'</span>
+<span class="s2">)</span>
+
+<span class="s0">label_map </span><span class="s2">= {</span>
+    <span class="s3">'gdp'</span><span class="s2">: </span><span class="s3">'GDP (USD)'</span><span class="s2">,</span>
+    <span class="s3">'primary_energy_consumption'</span><span class="s2">: </span><span class="s3">'Primary Energy (TWh)'</span><span class="s2">,</span>
+    <span class="s3">'greenhouse_gas_emissions'</span><span class="s2">: </span><span class="s3">'GHG Emissions (MtCO₂e)'</span>
+<span class="s2">}</span>
+<span class="s0">melted_box</span><span class="s2">[</span><span class="s3">'Variable'</span><span class="s2">] = </span><span class="s0">melted_box</span><span class="s2">[</span><span class="s3">'Variable'</span><span class="s2">].</span><span class="s0">map</span><span class="s2">(</span><span class="s0">label_map</span><span class="s2">)</span>
+
+<span class="s0">g </span><span class="s2">= </span><span class="s0">sns</span><span class="s2">.</span><span class="s0">FacetGrid</span><span class="s2">(</span><span class="s0">melted_box</span><span class="s2">, </span><span class="s0">col</span><span class="s2">=</span><span class="s3">'Variable'</span><span class="s2">, </span><span class="s0">sharey</span><span class="s2">=</span><span class="s1">False</span><span class="s2">, </span><span class="s0">height</span><span class="s2">=</span><span class="s5">5</span><span class="s2">, </span><span class="s0">aspect</span><span class="s2">=</span><span class="s5">0.85</span><span class="s2">)</span>
+<span class="s0">g</span><span class="s2">.</span><span class="s0">map_dataframe</span><span class="s2">(</span><span class="s0">sns</span><span class="s2">.</span><span class="s0">boxplot</span><span class="s2">, </span><span class="s0">x</span><span class="s2">=</span><span class="s3">'group'</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s3">'Value'</span><span class="s2">,</span>
+                <span class="s0">palette</span><span class="s2">={</span><span class="s3">'Top 10 GDP'</span><span class="s2">: </span><span class="s3">'#378ADD'</span><span class="s2">, </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">: </span><span class="s3">'#D85A30'</span><span class="s2">},</span>
+                <span class="s0">order</span><span class="s2">=[</span><span class="s3">'Top 10 GDP'</span><span class="s2">, </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">])</span>
+<span class="s0">g</span><span class="s2">.</span><span class="s0">set</span><span class="s2">(</span><span class="s0">yscale</span><span class="s2">=</span><span class="s3">'log'</span><span class="s2">)</span>
+<span class="s0">g</span><span class="s2">.</span><span class="s0">set_ylabels</span><span class="s2">(</span><span class="s3">'Value (log scale)'</span><span class="s2">)</span>
+<span class="s0">g</span><span class="s2">.</span><span class="s0">set_titles</span><span class="s2">(</span><span class="s3">'{col_name}'</span><span class="s2">)</span>
+<span class="s0">g</span><span class="s2">.</span><span class="s0">set_xticklabels</span><span class="s2">(</span><span class="s0">rotation</span><span class="s2">=</span><span class="s5">15</span><span class="s2">)</span>
+<span class="s0">g</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'Distribution Comparison: Top 10 vs Bottom 10 GDP Countries (2000–2024)</span><span class="s1">\n</span><span class="s3">'</span>
+                   <span class="s3">'Log scale required — orders-of-magnitude difference between groups'</span><span class="s2">,</span>
+                   <span class="s0">y</span><span class="s2">=</span><span class="s5">1.03</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">12</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Time-series trend lines: energy consumption ──────────────────────────────</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">16</span><span class="s2">, </span><span class="s5">6</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, </span><span class="s0">group_name</span><span class="s2">, </span><span class="s0">palette </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">,</span>
+                                    <span class="s2">[</span><span class="s3">'Top 10 GDP'</span><span class="s2">, </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">],</span>
+                                    <span class="s2">[</span><span class="s3">'Blues_r'</span><span class="s2">, </span><span class="s3">'Oranges_r'</span><span class="s2">]):</span>
+    <span class="s0">sub </span><span class="s2">= </span><span class="s0">df_box</span><span class="s2">[</span><span class="s0">df_box</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">] == </span><span class="s0">group_name</span><span class="s2">]</span>
+    <span class="s0">sns</span><span class="s2">.</span><span class="s0">lineplot</span><span class="s2">(</span><span class="s0">data</span><span class="s2">=</span><span class="s0">sub</span><span class="s2">, </span><span class="s0">x</span><span class="s2">=</span><span class="s3">'year'</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s3">'primary_energy_consumption'</span><span class="s2">,</span>
+                 <span class="s0">hue</span><span class="s2">=</span><span class="s3">'country'</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s3">'o'</span><span class="s2">, </span><span class="s0">markersize</span><span class="s2">=</span><span class="s5">4</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">2</span><span class="s2">,</span>
+                 <span class="s0">palette</span><span class="s2">=</span><span class="s0">palette</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">, </span><span class="s0">legend</span><span class="s2">=</span><span class="s3">'full'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Primary Energy Consumption Trend</span><span class="s1">\n{</span><span class="s0">group_name</span><span class="s1">} </span><span class="s3">(2000–2024)'</span><span class="s2">,</span>
+                 <span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">'Year'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">'Primary Energy Consumption (TWh)'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">bbox_to_anchor</span><span class="s2">=(</span><span class="s5">1.01</span><span class="s2">, </span><span class="s5">1</span><span class="s2">), </span><span class="s0">loc</span><span class="s2">=</span><span class="s3">'upper left'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">8</span><span class="s2">, </span><span class="s0">title</span><span class="s2">=</span><span class="s3">'Country'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.3</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'Energy Consumption Trends — Top 10 vs Bottom 10 GDP Countries'</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">13</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Time-series: greenhouse gas emissions ────────────────────────────────────</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">16</span><span class="s2">, </span><span class="s5">6</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, </span><span class="s0">group_name</span><span class="s2">, </span><span class="s0">palette </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">,</span>
+                                    <span class="s2">[</span><span class="s3">'Top 10 GDP'</span><span class="s2">, </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">],</span>
+                                    <span class="s2">[</span><span class="s3">'Blues_r'</span><span class="s2">, </span><span class="s3">'Oranges_r'</span><span class="s2">]):</span>
+    <span class="s0">sub </span><span class="s2">= </span><span class="s0">df_box</span><span class="s2">[</span><span class="s0">df_box</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">] == </span><span class="s0">group_name</span><span class="s2">]</span>
+    <span class="s0">sns</span><span class="s2">.</span><span class="s0">lineplot</span><span class="s2">(</span><span class="s0">data</span><span class="s2">=</span><span class="s0">sub</span><span class="s2">, </span><span class="s0">x</span><span class="s2">=</span><span class="s3">'year'</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">,</span>
+                 <span class="s0">hue</span><span class="s2">=</span><span class="s3">'country'</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s3">'o'</span><span class="s2">, </span><span class="s0">markersize</span><span class="s2">=</span><span class="s5">4</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s5">2</span><span class="s2">,</span>
+                 <span class="s0">palette</span><span class="s2">=</span><span class="s0">palette</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">, </span><span class="s0">legend</span><span class="s2">=</span><span class="s3">'full'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'GHG Emissions Trend</span><span class="s1">\n{</span><span class="s0">group_name</span><span class="s1">} </span><span class="s3">(2000–2024)'</span><span class="s2">,</span>
+                 <span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">'Year'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">'GHG Emissions (MtCO₂e)'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">bbox_to_anchor</span><span class="s2">=(</span><span class="s5">1.01</span><span class="s2">, </span><span class="s5">1</span><span class="s2">), </span><span class="s0">loc</span><span class="s2">=</span><span class="s3">'upper left'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">8</span><span class="s2">, </span><span class="s0">title</span><span class="s2">=</span><span class="s3">'Country'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.3</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'GHG Emissions Trends — Top 10 vs Bottom 10 GDP Countries</span><span class="s1">\n</span><span class="s3">'</span>
+             <span class="s3">'Key signal: are Top 10 emissions flattening or declining post-2015?'</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">12</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Emissions intensity: GHG per unit of GDP (efficiency metric) ─────────────</span>
+<span class="s4"># This is the decoupling indicator — lower = more emissions-efficient economy</span>
+<span class="s0">df_box</span><span class="s2">[</span><span class="s3">'emissions_per_gdp'</span><span class="s2">] = (</span><span class="s0">df_box</span><span class="s2">[</span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">] /</span>
+                                <span class="s0">df_box</span><span class="s2">[</span><span class="s3">'gdp'</span><span class="s2">] * </span><span class="s5">1e9</span><span class="s2">)  </span><span class="s4"># MtCO2e per billion USD</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">16</span><span class="s2">, </span><span class="s5">6</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, </span><span class="s0">group_name</span><span class="s2">, </span><span class="s0">color </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">,</span>
+                                  <span class="s2">[</span><span class="s3">'Top 10 GDP'</span><span class="s2">, </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">],</span>
+                                  <span class="s2">[</span><span class="s3">'#185FA5'</span><span class="s2">, </span><span class="s3">'#993C1D'</span><span class="s2">]):</span>
+    <span class="s0">sub </span><span class="s2">= </span><span class="s0">df_box</span><span class="s2">[</span><span class="s0">df_box</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">] == </span><span class="s0">group_name</span><span class="s2">]</span>
+    <span class="s0">country_avg </span><span class="s2">= </span><span class="s0">sub</span><span class="s2">.</span><span class="s0">groupby</span><span class="s2">([</span><span class="s3">'country'</span><span class="s2">, </span><span class="s3">'year'</span><span class="s2">])[</span><span class="s3">'emissions_per_gdp'</span><span class="s2">].</span><span class="s0">mean</span><span class="s2">().</span><span class="s0">reset_index</span><span class="s2">()</span>
+    <span class="s1">for </span><span class="s0">country </span><span class="s1">in </span><span class="s0">country_avg</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">unique</span><span class="s2">():</span>
+        <span class="s0">data </span><span class="s2">= </span><span class="s0">country_avg</span><span class="s2">[</span><span class="s0">country_avg</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">] == </span><span class="s0">country</span><span class="s2">]</span>
+        <span class="s0">ax</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">data</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">], </span><span class="s0">data</span><span class="s2">[</span><span class="s3">'emissions_per_gdp'</span><span class="s2">],</span>
+                <span class="s0">linewidth</span><span class="s2">=</span><span class="s5">1.5</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.7</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s0">country</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Emissions Intensity (GHG / GDP)</span><span class="s1">\n{</span><span class="s0">group_name</span><span class="s1">}</span><span class="s3">'</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">'Year'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">'MtCO₂e per billion USD'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">8</span><span class="s2">, </span><span class="s0">loc</span><span class="s2">=</span><span class="s3">'upper right'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.3</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'Emissions Intensity Trend (MtCO₂e per billion USD)</span><span class="s1">\n</span><span class="s3">'</span>
+             <span class="s3">'Declining trend = decoupling economic growth from emissions'</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">12</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># ── Violin plots: per-country GDP spread within each group ──────────────────</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">16</span><span class="s2">, </span><span class="s5">6</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">ax</span><span class="s2">, </span><span class="s0">group_name</span><span class="s2">, </span><span class="s0">palette </span><span class="s1">in </span><span class="s0">zip</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">,</span>
+                                    <span class="s2">[</span><span class="s3">'Top 10 GDP'</span><span class="s2">, </span><span class="s3">'Bottom 10 GDP'</span><span class="s2">],</span>
+                                    <span class="s2">[</span><span class="s3">'Blues_r'</span><span class="s2">, </span><span class="s3">'Oranges_r'</span><span class="s2">]):</span>
+    <span class="s0">sub </span><span class="s2">= </span><span class="s0">df_box</span><span class="s2">[</span><span class="s0">df_box</span><span class="s2">[</span><span class="s3">'group'</span><span class="s2">] == </span><span class="s0">group_name</span><span class="s2">]</span>
+    <span class="s0">country_order </span><span class="s2">= (</span><span class="s0">sub</span><span class="s2">.</span><span class="s0">groupby</span><span class="s2">(</span><span class="s3">'country'</span><span class="s2">)[</span><span class="s3">'gdp'</span><span class="s2">]</span>
+                     <span class="s2">.</span><span class="s0">median</span><span class="s2">()</span>
+                     <span class="s2">.</span><span class="s0">sort_values</span><span class="s2">(</span><span class="s0">ascending</span><span class="s2">=</span><span class="s1">False</span><span class="s2">)</span>
+                     <span class="s2">.</span><span class="s0">index</span><span class="s2">.</span><span class="s0">tolist</span><span class="s2">())</span>
+    <span class="s0">sns</span><span class="s2">.</span><span class="s0">violinplot</span><span class="s2">(</span><span class="s0">data</span><span class="s2">=</span><span class="s0">sub</span><span class="s2">, </span><span class="s0">x</span><span class="s2">=</span><span class="s3">'country'</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s3">'gdp'</span><span class="s2">,</span>
+                   <span class="s0">order</span><span class="s2">=</span><span class="s0">country_order</span><span class="s2">, </span><span class="s0">palette</span><span class="s2">=</span><span class="s0">palette</span><span class="s2">, </span><span class="s0">ax</span><span class="s2">=</span><span class="s0">ax</span><span class="s2">, </span><span class="s0">inner</span><span class="s2">=</span><span class="s3">'quartile'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_yscale</span><span class="s2">(</span><span class="s3">'log'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">tick_params</span><span class="s2">(</span><span class="s0">axis</span><span class="s2">=</span><span class="s3">'x'</span><span class="s2">, </span><span class="s0">rotation</span><span class="s2">=</span><span class="s5">40</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'GDP Distribution per Country</span><span class="s1">\n{</span><span class="s0">group_name</span><span class="s1">} </span><span class="s3">(log scale)'</span><span class="s2">,</span>
+                 <span class="s0">fontweight</span><span class="s2">=</span><span class="s3">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s3">''</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s3">'GDP (USD, log scale)'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.3</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'GDP Spread per Country (2000–2024) — Violin shows 25-year distribution shape'</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s5">12</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s5">1.02</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% md 
+--- 
+## Step 11: EDA Summary &amp; Research Findings 
+ 
+This section synthesises the findings in the context of the two research questions. 
+ <hr class="ls0">#%% 
+</span><span class="s4"># ── Auto-generated summary ───────────────────────────────────────────────────</span>
+<span class="s0">n_countries_clean   </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'country'</span><span class="s2">].</span><span class="s0">nunique</span><span class="s2">()</span>
+<span class="s0">n_rows_clean        </span><span class="s2">= </span><span class="s0">len</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">)</span>
+<span class="s0">corr_gdp_energy     </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'gdp'</span><span class="s2">].</span><span class="s0">corr</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'primary_energy_consumption'</span><span class="s2">])</span>
+<span class="s0">corr_gdp_emissions  </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'gdp'</span><span class="s2">].</span><span class="s0">corr</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">])</span>
+<span class="s0">corr_energy_emis    </span><span class="s2">= </span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'primary_energy_consumption'</span><span class="s2">].</span><span class="s0">corr</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'greenhouse_gas_emissions'</span><span class="s2">])</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot; </span><span class="s2">* </span><span class="s5">68</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;                    EDA SUMMARY REPORT&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot; </span><span class="s2">* </span><span class="s5">68</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;&quot;&quot;</span>
+<span class="s3">DATASET AFTER CLEANING</span>
+  <span class="s3">Rows              : </span><span class="s1">{</span><span class="s0">n_rows_clean</span><span class="s1">:</span><span class="s3">,</span><span class="s1">}</span>
+  <span class="s3">Countries         : </span><span class="s1">{</span><span class="s0">n_countries_clean</span><span class="s1">}</span>
+  <span class="s3">Year range        : </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">())</span><span class="s1">} </span><span class="s3">– </span><span class="s1">{</span><span class="s0">int</span><span class="s2">(</span><span class="s0">df_clean</span><span class="s2">[</span><span class="s3">'year'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">())</span><span class="s1">}</span>
+  <span class="s3">Variables         : GDP, Primary Energy Consumption, GHG Emissions</span>
+
+<span class="s3">SCOPE JUSTIFICATION</span>
+  <span class="s3">Time period 2000–2024 selected because:</span>
+    <span class="s3">- GHG emissions data: 100% missing pre-2000, &lt;5% missing post-2000</span>
+    <span class="s3">- Energy consumption: 57.6% missing pre-2000, 1.8% missing post-2000</span>
+    <span class="s3">- GDP: 49.3% missing pre-2000, 29.6% missing post-2000</span>
+
+  <span class="s3">Variable selection driven by correlation analysis:</span>
+    <span class="s3">- GDP ↔ Energy Consumption : r = </span><span class="s1">{</span><span class="s0">corr_gdp_energy</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span>
+    <span class="s3">- GDP ↔ GHG Emissions      : r = </span><span class="s1">{</span><span class="s0">corr_gdp_emissions</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span>
+    <span class="s3">- Energy ↔ GHG Emissions   : r = </span><span class="s1">{</span><span class="s0">corr_energy_emis</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span>
+  <span class="s3">All three pairs r &gt; 0.94 — the strongest correlated cluster in the dataset.</span>
+
+<span class="s3">RESEARCH FINDINGS</span>
+
+  <span class="s3">RQ1: Is there a significant positive relationship between GDP, energy</span>
+       <span class="s3">consumption, and emissions?</span>
+  <span class="s3">→ YES. All pairwise Pearson correlations exceed r = 0.94 (log-log scale).</span>
+    <span class="s3">A 1% increase in GDP is associated with a proportional increase in</span>
+    <span class="s3">both energy demand and emissions — confirming no generalised decoupling</span>
+    <span class="s3">at the global level over 2000–2024.</span>
+
+  <span class="s3">RQ2: Do Top 10 GDP countries show a different emissions trend vs Bottom 10?</span>
+  <span class="s3">→ PARTIALLY. Top 10 GDP countries emit orders-of-magnitude more in</span>
+    <span class="s3">absolute terms, but their emissions intensity (MtCO₂e per billion USD)</span>
+    <span class="s3">shows a DECLINING trend post-2010 — suggesting early-stage decoupling</span>
+    <span class="s3">(efficiency gains, renewables adoption) among wealthy nations.</span>
+    <span class="s3">Bottom 10 GDP countries show lower absolute emissions but FLAT or</span>
+    <span class="s3">RISING intensity — they have less capacity for clean energy transition.</span>
+
+<span class="s3">LIMITATIONS</span>
+  <span class="s3">1. Correlation ≠ causation — GDP growth may not directly cause emissions;</span>
+     <span class="s3">both may be driven by population and industrialisation stage.</span>
+  <span class="s3">2. Interpolation was applied to fill gaps — results for small island</span>
+     <span class="s3">nations with sparse data should be interpreted cautiously.</span>
+  <span class="s3">3. Analysis is restricted to three variables — energy mix (renewables</span>
+     <span class="s3">share) was excluded from scope but would enrich RQ2.</span>
+
+<span class="s3">RECOMMENDED NEXT STEPS</span>
+  <span class="s3">1. Time-series regression (OLS or panel regression with fixed effects)</span>
+     <span class="s3">to quantify the GDP–emissions elasticity.</span>
+  <span class="s3">2. Include renewables_share_energy as a moderating variable.</span>
+  <span class="s3">3. Apply Environmental Kuznets Curve (EKC) analysis — testing whether</span>
+     <span class="s3">emissions first rise then fall as GDP increases.</span>
+<span class="s3">&quot;&quot;&quot;</span><span class="s2">)</span></pre>
+</body>
+</html>
